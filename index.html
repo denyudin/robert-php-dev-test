@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Robert CAT</title>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+<script data-plugins="transform-es2015-modules-umd" src="frontend/src/TranslationForm.js" type="text/babel"></script>
+<script data-plugins="transform-es2015-modules-umd" src="frontend/src/TranslationList.js" type="text/babel"></script>
+
+<script data-plugins="transform-es2015-modules-umd" type="text/babel">
+  import TranslationForm from './TranslationForm';
+  import TranslationList from './TranslationList';
+
+  const apiJsonClient = (url = '', method = 'GET', data = null) => new Promise((resolve, reject) => {
+    const options = {
+      method,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      cache: 'default',
+    };
+    if (data) {
+      options.body = JSON.stringify(data)
+    }
+    fetch(`/api/translations.php${url}`, options).then(response => response.json()).then(data => resolve(data));
+  })
+
+  const loadAll = () => apiJsonClient();
+  const loadId = (id) => apiJsonClient('/' + id);
+  const add = data => apiJsonClient('', 'POST', data);
+  const update = (id, data) => apiJsonClient('/' + id, 'PUT', data);
+
+  const App = () => {
+    const [units, setUnits] = React.useState([]);
+    const [selectedUnitId, setSelectedUnitId] = React.useState(null);
+    const [selectedUnit, setSelectedUnit] = React.useState({  });
+    const onClickEdit = id => setSelectedUnitId(id);
+    const onSubmit = data => {
+      if (selectedUnitId) {
+        update(selectedUnitId, data).then(resp => {
+          setSelectedUnitId(null);
+          setSelectedUnit({});
+          loadAll().then(data => setUnits(data))
+          alert("Translation unit updated!")
+        })
+      }
+      else {
+        add(data).then(resp => {
+          setSelectedUnitId(null);
+          setSelectedUnit({});
+          loadAll().then(data => setUnits(data))
+          alert("Translation unit added!")
+        });
+      }
+    };
+
+    React.useEffect(() => {
+      loadAll().then(data => setUnits(data))
+    }, []);
+
+    React.useEffect(() => {
+      if (selectedUnitId) {
+        loadId(selectedUnitId).then(data => setSelectedUnit(data))
+      }
+    }, [selectedUnitId]);
+
+    return (
+      <React.Fragment>
+        <TranslationList units={units} onClickEdit={onClickEdit}/>
+        <hr/>
+        <TranslationForm unit={selectedUnit} onSubmit={onSubmit}/>
+      </React.Fragment>
+    )
+  }
+
+  const domContainer = document.querySelector('#root');
+  const root = ReactDOM.createRoot(domContainer);
+  root.render(<App />);
+</script>
+</body>
+</html>
